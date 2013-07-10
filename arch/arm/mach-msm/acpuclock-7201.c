@@ -367,6 +367,9 @@ static struct clkctl_acpu_speed pll0_960_pll1_737_pll2_1200_25a[] = {
 #define PLL_800_MHZ	41
 #define PLL_960_MHZ	50
 #define PLL_1008_MHZ	52
+#define PLL_1056_MHZ	55
+#define PLL_1094_MHZ	57
+#define PLL_1104_MHZ	57
 #define PLL_1200_MHZ	62
 
 #define PLL_CONFIG(m0, m1, m2, m4) { \
@@ -523,14 +526,19 @@ static void acpuclk_set_div(const struct clkctl_acpu_speed *hunt_s)
 	/* AHB_CLK_DIV */
 	clk_div = (reg_clksel >> 1) & 0x03;
 
-#ifdef CONFIG_MSM7X27AA_OVERCLOCK
+	#ifdef CONFIG_MSM7X27AA_OVERCLOCK
 	// Perform overclocking if requested
-	if(hunt_s->pll == ACPU_PLL_2 && hunt_s->a11clk_khz > 800000) {
-		// Change the speed of PLL2
-		writel_relaxed(hunt_s->a11clk_khz/19200, PLLn_L_VAL(ACPU_PLL_2));
-		udelay(50);
+	if (hunt_s->a11clk_khz > 800000) {
+	// Change the speed of PLL4
+	writel(hunt_s->a11clk_khz/19200,PLL4_L_VAL);
+	udelay(50);
 	}
-#endif
+        if(hunt_s->a11clk_khz > 1112000) {
+        // Change the speed of PLL4
+	writel(PLL_1104_MHZ, PLL4_L_VAL);
+	udelay(50);
+	}
+	#endif
  
 	/* CLK_SEL_SRC1NO */
 	src_sel = reg_clksel & 1;
@@ -556,14 +564,14 @@ static void acpuclk_set_div(const struct clkctl_acpu_speed *hunt_s)
 	reg_clksel ^= 1;
 	writel_relaxed(reg_clksel, A11S_CLK_SEL_ADDR);
 
-#ifdef CONFIG_MSM7X27AA_OVERCLOCK
+	#ifdef CONFIG_MSM7X27AA_OVERCLOCK
 	// Recover from overclocking
-	if(hunt_s->pll == ACPU_PLL_2 && hunt_s->a11clk_khz <= 800000) {
-		// Restore the speed of PLL2
-		writel_relaxed(PLL_1200_MHZ, PLLn_L_VAL(ACPU_PLL_2));
-		udelay(50);
+	if (hunt_s->a11clk_khz<=800000) {
+	// Restore the speed of PLL4
+	writel(PLL_800_MHZ, PLL4_L_VAL);
+	udelay(50);
 	}
-#endif
+	#endif
 
 	/*
 	 * If the new clock divider is lower than the previous, then
